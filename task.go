@@ -28,6 +28,7 @@ type TaskFace interface {
 	GetNext() time.Time
 	SetPrev(time.Time)
 	GetPrev() time.Time
+	UpdateSpec(string)
 }
 
 // task error
@@ -55,7 +56,10 @@ func (t *Task) GetSpec() string {
 
 // GetStatus get current task status
 func (t *Task) GetStatus() string {
-	var str string
+	var (
+		str string
+	)
+
 	for _, v := range t.Errlist {
 		str += v.time.String() + ":" + v.info + "<br>"
 	}
@@ -64,8 +68,11 @@ func (t *Task) GetStatus() string {
 
 // Run run all tasks
 func (t *Task) Run() error {
-	err := t.DoFunc()
-	if err != nil {
+	var (
+		err error
+	)
+
+	if err = t.DoFunc(); err != nil {
 		if t.ErrLimit > 0 && t.ErrLimit > len(t.Errlist) {
 			t.Errlist = append(t.Errlist, &taskerr{time: t.Next, info: err.Error()})
 		}
@@ -91,6 +98,14 @@ func (t *Task) SetPrev(now time.Time) {
 // GetPrev get prev time of this task
 func (t *Task) GetPrev() time.Time {
 	return t.Prev
+}
+
+// GetSpec get spec string
+func (t *Task) UpdateSpec(spec string) {
+	if strings.Compare(t.SpecStr, spec) != 0 {
+		t.SpecStr = spec
+		t.SetCron()
+	}
 }
 
 // six columns mean：
@@ -125,8 +140,8 @@ func (t *Task) GetPrev() time.Time {
 //	0 0 * * * *　　　　　　　　               0 min of hour in 1 hour duration
 //	0 2 8-20/3 * * *　　　　　　             8:02, 11:02, 14:02, 17:02, 20:02
 //	0 30 5 1,15 * *　　　　　　              5:30 on the 1st day and 15th day of month
-func (t *Task) SetCron(spec string) {
-	t.Spec = t.parse(spec)
+func (t *Task) SetCron() {
+	t.Spec = t.parse(t.SpecStr)
 }
 
 func (t *Task) parse(spec string) *Schedule {
@@ -135,17 +150,18 @@ func (t *Task) parse(spec string) *Schedule {
 	}
 	// Split on whitespace.  We require 5 or 6 fields.
 	// (second) (minute) (hour) (day of month) (month) (day of week, optional)
-	fields := strings.Fields(spec)
+	var (
+		fields = strings.Fields(spec)
+	)
 	if len(fields) != 5 && len(fields) != 6 {
 		log.Panicf("Expected 5 or 6 fields, found %d: %s", len(fields), spec)
 	}
-
 	// If a sixth field is not provided (DayOfWeek), then it is equivalent to star.
 	if len(fields) == 5 {
 		fields = append(fields, "*")
 	}
 
-	schedule := &Schedule{
+	return &Schedule{
 		Second: getField(fields[0], seconds),
 		Minute: getField(fields[1], minutes),
 		Hour:   getField(fields[2], hours),
@@ -154,7 +170,6 @@ func (t *Task) parse(spec string) *Schedule {
 		Week:   getField(fields[5], weeks),
 	}
 
-	return schedule
 }
 
 func (t *Task) parseSpec(spec string) *Schedule {
@@ -168,7 +183,6 @@ func (t *Task) parseSpec(spec string) *Schedule {
 			Month:  1 << months.min,
 			Week:   all(weeks),
 		}
-
 	case "@monthly":
 		return &Schedule{
 			Second: 1 << seconds.min,
@@ -178,7 +192,6 @@ func (t *Task) parseSpec(spec string) *Schedule {
 			Month:  all(months),
 			Week:   all(weeks),
 		}
-
 	case "@weekly":
 		return &Schedule{
 			Second: 1 << seconds.min,
@@ -188,7 +201,6 @@ func (t *Task) parseSpec(spec string) *Schedule {
 			Month:  all(months),
 			Week:   1 << weeks.min,
 		}
-
 	case "@daily", "@midnight":
 		return &Schedule{
 			Second: 1 << seconds.min,
@@ -198,7 +210,6 @@ func (t *Task) parseSpec(spec string) *Schedule {
 			Month:  all(months),
 			Week:   all(weeks),
 		}
-
 	case "@hourly":
 		return &Schedule{
 			Second: 1 << seconds.min,
@@ -229,7 +240,6 @@ WRAP:
 	if t.Year() > yearLimit {
 		return time.Time{}
 	}
-
 	// Find the first applicable month.
 	// If it's this month, then do nothing.
 	for 1<<uint(t.Month())&s.Month == 0 {
@@ -240,7 +250,6 @@ WRAP:
 			t = time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
 		}
 		t = t.AddDate(0, 1, 0)
-
 		// Wrapped around.
 		if t.Month() == time.January {
 			goto WRAP

@@ -31,7 +31,7 @@ func NewTask(tname string, spec string, f TaskFunc) *Task {
 		ErrLimit: 100,
 		SpecStr:  spec,
 	}
-	task.SetCron(spec)
+	task.SetCron()
 	return task
 }
 

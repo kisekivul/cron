@@ -13,10 +13,8 @@ import (
 	"time"
 )
 
-var (
-	startTime = time.Now()
-	pid       int
-)
+var startTime = time.Now()
+var pid int
 
 func init() {
 	pid = os.Getpid()
@@ -50,12 +48,9 @@ func ProcessInput(input string, w io.Writer) {
 func MemProf(w io.Writer) {
 	var (
 		filename = "mem-" + strconv.Itoa(pid) + ".memprof"
-		f        *os.File
-		fl       string
-		err      error
 	)
 
-	if f, err = os.Create(filename); err != nil {
+	if f, err := os.Create(filename); err != nil {
 		fmt.Fprintf(w, "create file %s error %s\n", filename, err.Error())
 		log.Fatal("record heap profile failed: ", err)
 	} else {
@@ -63,7 +58,7 @@ func MemProf(w io.Writer) {
 		pprof.WriteHeapProfile(f)
 		f.Close()
 		fmt.Fprintf(w, "create heap profile %s \n", filename)
-		_, fl = path.Split(os.Args[0])
+		_, fl := path.Split(os.Args[0])
 		fmt.Fprintf(w, "Now you can use this to check it: go tool pprof %s %s\n", fl, filename)
 	}
 }
@@ -73,12 +68,9 @@ func GetCPUProfile(w io.Writer) {
 	var (
 		sec      = 30
 		filename = "cpu-" + strconv.Itoa(pid) + ".pprof"
-		f        *os.File
-		fl       string
-		err      error
 	)
 
-	f, err = os.Create(filename)
+	f, err := os.Create(filename)
 	if err != nil {
 		fmt.Fprintf(w, "Could not enable CPU profiling: %s\n", err)
 		log.Fatal("record cpu profile failed: ", err)
@@ -88,20 +80,15 @@ func GetCPUProfile(w io.Writer) {
 	pprof.StopCPUProfile()
 
 	fmt.Fprintf(w, "create cpu profile %s \n", filename)
-	_, fl = path.Split(os.Args[0])
+	_, fl := path.Split(os.Args[0])
 	fmt.Fprintf(w, "Now you can use this to check it: go tool pprof %s %s\n", fl, filename)
 }
 
 // PrintGCSummary print gc information to io.Writer
 func PrintGCSummary(w io.Writer) {
-	var (
-		memStats = &runtime.MemStats{}
-	)
+	memStats := &runtime.MemStats{}
 	runtime.ReadMemStats(memStats)
-
-	var (
-		gcstats = &debug.GCStats{PauseQuantiles: make([]time.Duration, 100)}
-	)
+	gcstats := &debug.GCStats{PauseQuantiles: make([]time.Duration, 100)}
 	debug.ReadGCStats(gcstats)
 
 	printGC(memStats, gcstats, w)
@@ -109,12 +96,10 @@ func PrintGCSummary(w io.Writer) {
 
 func printGC(memStats *runtime.MemStats, gcstats *debug.GCStats, w io.Writer) {
 	if gcstats.NumGC > 0 {
-		var (
-			lastPause     = gcstats.Pause[0]
-			elapsed       = time.Since(startTime)
-			overhead      = float64(gcstats.PauseTotal) / float64(elapsed) * 100
-			allocatedRate = float64(memStats.TotalAlloc) / elapsed.Seconds()
-		)
+		lastPause := gcstats.Pause[0]
+		elapsed := time.Now().Sub(startTime)
+		overhead := float64(gcstats.PauseTotal) / float64(elapsed) * 100
+		allocatedRate := float64(memStats.TotalAlloc) / elapsed.Seconds()
 
 		fmt.Fprintf(w, "NumGC:%d Pause:%s Pause(Avg):%s Overhead:%3.2f%% Alloc:%s Sys:%s Alloc(Rate):%s/s Histogram:%s %s %s \n",
 			gcstats.NumGC,
@@ -129,10 +114,8 @@ func printGC(memStats *runtime.MemStats, gcstats *debug.GCStats, w io.Writer) {
 			toS(gcstats.PauseQuantiles[99]))
 	} else {
 		// while GC has disabled
-		var (
-			elapsed       = time.Since(startTime)
-			allocatedRate = float64(memStats.TotalAlloc) / elapsed.Seconds()
-		)
+		elapsed := time.Now().Sub(startTime)
+		allocatedRate := float64(memStats.TotalAlloc) / elapsed.Seconds()
 
 		fmt.Fprintf(w, "Alloc:%s Sys:%s Alloc(Rate):%s/s\n",
 			toH(memStats.Alloc),
@@ -193,4 +176,5 @@ func toS(d time.Duration) string {
 			return fmt.Sprintf("%.2fh", float64(u)/1000/1000/1000/60/60)
 		}
 	}
+
 }

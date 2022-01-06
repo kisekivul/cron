@@ -18,7 +18,7 @@ type Statistics struct {
 
 // URLMap contains several statistics struct to log different data
 type URLMap struct {
-	locker      sync.RWMutex
+	lock        sync.RWMutex
 	LengthLimit int //limit the urlmap's length if it's equal to 0 there's no limit
 	urlmap      map[string]map[string]*Statistics
 }
@@ -26,8 +26,9 @@ type URLMap struct {
 // AddStatistics add statistics task.
 // it needs request method, request url, request controller and statistics time duration
 func (m *URLMap) AddStatistics(requestMethod, requestURL, requestController string, requesttime time.Duration) {
-	m.locker.Lock()
-	defer m.locker.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	if method, ok := m.urlmap[requestURL]; ok {
 		if s, ok := method[requestMethod]; ok {
 			s.RequestNum++
@@ -54,28 +55,32 @@ func (m *URLMap) AddStatistics(requestMethod, requestURL, requestController stri
 			return
 		}
 
-		m.urlmap[requestURL] = map[string]*Statistics{
-			requestMethod: {
+		var (
+			methodmap = make(map[string]*Statistics)
+		)
+		methodmap[requestMethod] = &Statistics{
 			RequestURL:        requestURL,
 			RequestController: requestController,
 			RequestNum:        1,
 			MinTime:           requesttime,
 			MaxTime:           requesttime,
-				TotalTime:         requesttime},
+			TotalTime:         requesttime,
 		}
+		m.urlmap[requestURL] = methodmap
 	}
 }
 
 // GetMap put url statistics result in io.Writer
 func (m *URLMap) GetMap() map[string]interface{} {
-	m.locker.RLock()
-	defer m.locker.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
 	var (
 		resultLists [][]string
+		fields      = []string{"requestUrl", "method", "times", "used", "max used", "min used", "avg used"}
 		content     = make(map[string]interface{})
 	)
-	content["Fields"] = []string{"requestUrl", "method", "times", "used", "max used", "min used", "avg used"}
+	content["Fields"] = fields
 
 	for k, v := range m.urlmap {
 		for kk, vv := range v {
@@ -101,8 +106,8 @@ func (m *URLMap) GetMap() map[string]interface{} {
 
 // GetMapData return all mapdata
 func (m *URLMap) GetMapData() []map[string]interface{} {
-	m.locker.RLock()
-	defer m.locker.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
 	var (
 		resultLists []map[string]interface{}
@@ -110,16 +115,15 @@ func (m *URLMap) GetMapData() []map[string]interface{} {
 
 	for k, v := range m.urlmap {
 		for kk, vv := range v {
-			resultLists = append(
-				resultLists,
+			resultLists = append(resultLists,
 				map[string]interface{}{
-				"request_url": k,
-				"method":      kk,
-				"times":       vv.RequestNum,
-				"total_time":  toS(vv.TotalTime),
-				"max_time":    toS(vv.MaxTime),
-				"min_time":    toS(vv.MinTime),
-				"avg_time":    toS(time.Duration(int64(vv.TotalTime) / vv.RequestNum)),
+					"request_url": k,
+					"method":      kk,
+					"times":       vv.RequestNum,
+					"total_time":  toS(vv.TotalTime),
+					"max_time":    toS(vv.MaxTime),
+					"min_time":    toS(vv.MinTime),
+					"avg_time":    toS(time.Duration(int64(vv.TotalTime) / vv.RequestNum)),
 				},
 			)
 		}

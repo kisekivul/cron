@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	SPLITER_ASTERISK = "*"
-	SPLITER_BLANK    = " "
-	SPLITER_SLASH    = "/"
+	ASTERISK = "*"
+	BLANK    = " "
+	SLASH    = "/"
 )
 
 func Crontab(i string) string {
@@ -17,7 +17,7 @@ func Crontab(i string) string {
 		temp = []string{}
 	)
 
-	for _, v := range strings.Split(i, SPLITER_BLANK) {
+	for _, v := range strings.Split(i, BLANK) {
 		if strings.Compare(v, "") != 0 {
 			strs = append(strs, strings.TrimSpace(v))
 		}
@@ -29,6 +29,7 @@ func Crontab(i string) string {
 		if t == 0 {
 			return ""
 		}
+		t = t * 60
 		// interval kind
 		var (
 			day    = t / 3600 / 24
@@ -40,21 +41,21 @@ func Crontab(i string) string {
 		switch {
 		case day > 0:
 			temp = append(temp, "0", "0", "0")
-			temp = append(temp, strings.Join([]string{SPLITER_ASTERISK, strconv.Itoa(day)}, SPLITER_SLASH))
+			temp = append(temp, strings.Join([]string{ASTERISK, strconv.Itoa(day)}, SLASH))
 		case hour > 0:
 			temp = append(temp, "0", "0")
-			temp = append(temp, strings.Join([]string{SPLITER_ASTERISK, strconv.Itoa(hour)}, SPLITER_SLASH))
+			temp = append(temp, strings.Join([]string{ASTERISK, strconv.Itoa(hour)}, SLASH))
 		case minute > 0:
 			temp = append(temp, "0")
-			temp = append(temp, strings.Join([]string{SPLITER_ASTERISK, strconv.Itoa(minute)}, SPLITER_SLASH))
+			temp = append(temp, strings.Join([]string{ASTERISK, strconv.Itoa(minute)}, SLASH))
 		case second > 0:
-			temp = append(temp, strings.Join([]string{SPLITER_ASTERISK, strconv.Itoa(second)}, SPLITER_SLASH))
+			temp = append(temp, strings.Join([]string{ASTERISK, strconv.Itoa(second)}, SLASH))
 		}
 		// fix
 		for i := 6 - len(temp); i > 0; i-- {
-			temp = append(temp, SPLITER_ASTERISK)
+			temp = append(temp, ASTERISK)
 		}
-		return strings.Join(temp, SPLITER_BLANK)
+		return strings.Join(temp, BLANK)
 	case 5:
 		temp = append([]string{"0"}, temp...)
 		fallthrough
@@ -64,7 +65,7 @@ func Crontab(i string) string {
 		temp[4] = convertMonth(temp[4])
 		// convert weekday
 		temp[5] = convertWeek(temp[5])
-		return strings.Join(temp, SPLITER_BLANK)
+		return strings.Join(temp, BLANK)
 	}
 	return ""
 }

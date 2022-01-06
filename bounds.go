@@ -64,15 +64,14 @@ func getField(field string, r bounds) uint64 {
 // getRange returns the bits indicated by the given expression:
 //   number | number "-" number [ "/" number ]
 func getRange(expr string, r bounds) uint64 {
-
 	var (
 		start, end, step uint
 		rangeAndStep     = strings.Split(expr, "/")
 		lowAndHigh       = strings.Split(rangeAndStep[0], "-")
 		singleDigit      = len(lowAndHigh) == 1
+		extrastar        uint64
 	)
 
-	var extrastar uint64
 	if lowAndHigh[0] == "*" || lowAndHigh[0] == "?" {
 		start = r.min
 		end = r.max
@@ -94,7 +93,6 @@ func getRange(expr string, r bounds) uint64 {
 		step = 1
 	case 2:
 		step = mustParseInt(rangeAndStep[1])
-
 		// Special handling: "N/step" means "N-max/step".
 		if singleDigit {
 			end = r.max
@@ -112,7 +110,6 @@ func getRange(expr string, r bounds) uint64 {
 	if start > end {
 		log.Panicf("Beginning of range (%d) beyond end of range (%d): %s", start, end, expr)
 	}
-
 	return getBits(start, end, step) | extrastar
 }
 
@@ -141,13 +138,13 @@ func mustParseInt(expr string) uint {
 
 // getBits sets all bits in the range [min, max], modulo the given step size.
 func getBits(min, max, step uint) uint64 {
-	var bits uint64
-
+	var (
+		bits uint64
+	)
 	// If step is 1, use shifts.
 	if step == 1 {
 		return ^(math.MaxUint64 << (max + 1)) & (math.MaxUint64 << min)
 	}
-
 	// Else, use a simple loop.
 	for i := min; i <= max; i += step {
 		bits |= 1 << i
