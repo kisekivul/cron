@@ -29,7 +29,6 @@ func Crontab(i string) string {
 		if t == 0 {
 			return ""
 		}
-		t = t * 60
 		// interval kind
 		var (
 			day    = t / 3600 / 24
